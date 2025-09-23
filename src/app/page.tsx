@@ -1,103 +1,154 @@
-import Image from "next/image";
+"use client";
+
+import { useEffect, useRef, useState } from "react";
+import AboutSection from "@/components/AboutSection";
+import IntroSection from "@/components/IntroSection";
+import CosmicBackground from "@/components/CosmicBackground";
 
 export default function Home() {
-  return (
-    <div className="font-sans grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20">
-      <main className="flex flex-col gap-[32px] row-start-2 items-center sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={180}
-          height={38}
-          priority
-        />
-        <ol className="font-mono list-inside list-decimal text-sm/6 text-center sm:text-left">
-          <li className="mb-2 tracking-[-.01em]">
-            Get started by editing{" "}
-            <code className="bg-black/[.05] dark:bg-white/[.06] font-mono font-semibold px-1 py-0.5 rounded">
-              src/app/page.tsx
-            </code>
-            .
-          </li>
-          <li className="tracking-[-.01em]">
-            Save and see your changes instantly.
-          </li>
-        </ol>
+  // refs a los contenedores de sección
+  const sectionsRef = useRef<Array<HTMLElement | null>>([]);
+  const [current, setCurrent] = useState<number>(0);
+  const lastTime = useRef<number>(0);
+  const touchStartY = useRef<number | null>(null);
 
-        <div className="flex gap-4 items-center flex-col sm:flex-row">
-          <a
-            className="rounded-full border border-solid border-transparent transition-colors flex items-center justify-center bg-foreground text-background gap-2 hover:bg-[#383838] dark:hover:bg-[#ccc] font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 sm:w-auto"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={20}
-              height={20}
-            />
-            Deploy now
-          </a>
-          <a
-            className="rounded-full border border-solid border-black/[.08] dark:border-white/[.145] transition-colors flex items-center justify-center hover:bg-[#f2f2f2] dark:hover:bg-[#1a1a1a] hover:border-transparent font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 w-full sm:w-auto md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Read our docs
-          </a>
+  // asegurar que arrancamos en la primera sección
+  useEffect(() => {
+    window.scrollTo({ top: 0 });
+    setCurrent(0);
+  }, []);
+
+  // wheel -> navegar entre secciones
+  useEffect(() => {
+    const onWheel = (e: WheelEvent) => {
+      // bloquea scroll nativo para controlar el paso por secciones
+      e.preventDefault();
+      const now = Date.now();
+      if (now - lastTime.current < 700) return; // debounce
+      const delta = e.deltaY;
+      if (Math.abs(delta) < 8) return;
+      const dir = delta > 0 ? 1 : -1;
+      const target = Math.max(
+        0,
+        Math.min(sectionsRef.current.length - 1, current + dir)
+      );
+      if (target !== current) {
+        lastTime.current = now;
+        setCurrent(target);
+        sectionsRef.current[target]?.scrollIntoView({ behavior: "smooth" });
+      }
+    };
+
+    window.addEventListener("wheel", onWheel, { passive: false });
+    return () => window.removeEventListener("wheel", onWheel);
+  }, [current]);
+
+  // touch -> swipe
+  useEffect(() => {
+    const start = (e: TouchEvent) => {
+      touchStartY.current = e.touches[0]?.clientY ?? null;
+    };
+    const end = (e: TouchEvent) => {
+      if (touchStartY.current === null) return;
+      const endY = e.changedTouches?.[0]?.clientY ?? 0;
+      const diff = touchStartY.current - endY;
+      touchStartY.current = null;
+      if (Math.abs(diff) < 50) return;
+      const now = Date.now();
+      if (now - lastTime.current < 700) return;
+      const dir = diff > 0 ? 1 : -1;
+      const target = Math.max(
+        0,
+        Math.min(sectionsRef.current.length - 1, current + dir)
+      );
+      if (target !== current) {
+        lastTime.current = now;
+        setCurrent(target);
+        sectionsRef.current[target]?.scrollIntoView({ behavior: "smooth" });
+      }
+    };
+
+    window.addEventListener("touchstart", start, { passive: true });
+    window.addEventListener("touchend", end, { passive: true });
+
+    return () => {
+      window.removeEventListener("touchstart", start);
+      window.removeEventListener("touchend", end);
+    };
+  }, [current]);
+
+  // keyboard: flechas / pageup/pagedown
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (["ArrowDown", "PageDown"].includes(e.key)) {
+        e.preventDefault();
+        const target = Math.min(sectionsRef.current.length - 1, current + 1);
+        if (target !== current) {
+          setCurrent(target);
+          sectionsRef.current[target]?.scrollIntoView({ behavior: "smooth" });
+        }
+      } else if (["ArrowUp", "PageUp"].includes(e.key)) {
+        e.preventDefault();
+        const target = Math.max(0, current - 1);
+        if (target !== current) {
+          setCurrent(target);
+          sectionsRef.current[target]?.scrollIntoView({ behavior: "smooth" });
+        }
+      }
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [current]);
+
+  // observar intersecciones para mantener el índice sincronizado si hace falta
+  useEffect(() => {
+    const observer = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          if (entry.isIntersecting) {
+            const idx = sectionsRef.current.findIndex(
+              (el) => el === entry.target
+            );
+            if (idx !== -1 && idx !== current) setCurrent(idx);
+          }
+        });
+      },
+      { threshold: 0.6 }
+    );
+
+    sectionsRef.current.forEach((el) => el && observer.observe(el));
+    return () => observer.disconnect();
+  }, [sectionsRef.current]);
+
+  return (
+    <main className="relative min-h-screen bg-[#06061B] text-white">
+      {/* Fondo fijo detrás */}
+      <div className="fixed inset-0 pointer-events-none z-0">
+        <CosmicBackground sectionIndex={current} />
+      </div>
+
+      {/* Contenido encima */}
+      <div className="relative z-10">
+        <div
+          ref={(el) => {
+            sectionsRef.current[0] = el;
+          }}
+          className="h-screen flex items-center justify-center"
+        >
+          <IntroSection />
         </div>
-      </main>
-      <footer className="row-start-3 flex gap-[24px] flex-wrap items-center justify-center">
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
+
+        <div
+          ref={(el) => {
+            sectionsRef.current[1] = el;
+          }}
+          className="h-screen flex items-center justify-center"
         >
-          <Image
-            aria-hidden
-            src="/file.svg"
-            alt="File icon"
-            width={16}
-            height={16}
-          />
-          Learn
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/window.svg"
-            alt="Window icon"
-            width={16}
-            height={16}
-          />
-          Examples
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/globe.svg"
-            alt="Globe icon"
-            width={16}
-            height={16}
-          />
-          Go to nextjs.org →
-        </a>
-      </footer>
-    </div>
+          <AboutSection />
+        </div>
+
+        {/* Si más secciones las pones aquí, aumenta el número de refs (simplemente añade más divs) */}
+      </div>
+    </main>
   );
 }
