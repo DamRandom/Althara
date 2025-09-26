@@ -3,28 +3,29 @@
 import { useEffect, useRef, useState } from "react";
 import AboutSection from "@/components/AboutSection";
 import IntroSection from "@/components/IntroSection";
+import ServicesSection from "@/components/ServicesSection";
 import CosmicBackground from "@/components/CosmicBackground";
+import ProjectsSection from "@/components/ProjectsSection";
+import TestimonialsSection from "@/components/TestimonialsSection";
+import ContactSection from "@/components/ContactSection"; // <-- nuevo
 
 export default function Home() {
-  // refs a los contenedores de sección
   const sectionsRef = useRef<Array<HTMLElement | null>>([]);
   const [current, setCurrent] = useState<number>(0);
   const lastTime = useRef<number>(0);
   const touchStartY = useRef<number | null>(null);
 
-  // asegurar que arrancamos en la primera sección
   useEffect(() => {
     window.scrollTo({ top: 0 });
     setCurrent(0);
   }, []);
 
-  // wheel -> navegar entre secciones
+  // wheel
   useEffect(() => {
     const onWheel = (e: WheelEvent) => {
-      // bloquea scroll nativo para controlar el paso por secciones
       e.preventDefault();
       const now = Date.now();
-      if (now - lastTime.current < 700) return; // debounce
+      if (now - lastTime.current < 700) return;
       const delta = e.deltaY;
       if (Math.abs(delta) < 8) return;
       const dir = delta > 0 ? 1 : -1;
@@ -38,12 +39,11 @@ export default function Home() {
         sectionsRef.current[target]?.scrollIntoView({ behavior: "smooth" });
       }
     };
-
     window.addEventListener("wheel", onWheel, { passive: false });
     return () => window.removeEventListener("wheel", onWheel);
   }, [current]);
 
-  // touch -> swipe
+  // touch
   useEffect(() => {
     const start = (e: TouchEvent) => {
       touchStartY.current = e.touches[0]?.clientY ?? null;
@@ -67,17 +67,15 @@ export default function Home() {
         sectionsRef.current[target]?.scrollIntoView({ behavior: "smooth" });
       }
     };
-
     window.addEventListener("touchstart", start, { passive: true });
     window.addEventListener("touchend", end, { passive: true });
-
     return () => {
       window.removeEventListener("touchstart", start);
       window.removeEventListener("touchend", end);
     };
   }, [current]);
 
-  // keyboard: flechas / pageup/pagedown
+  // keyboard
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (["ArrowDown", "PageDown"].includes(e.key)) {
@@ -100,7 +98,7 @@ export default function Home() {
     return () => window.removeEventListener("keydown", onKey);
   }, [current]);
 
-  // observar intersecciones para mantener el índice sincronizado si hace falta
+  // observer
   useEffect(() => {
     const observer = new IntersectionObserver(
       (entries) => {
@@ -122,13 +120,12 @@ export default function Home() {
 
   return (
     <main className="relative min-h-screen bg-[#06061B] text-white">
-      {/* Fondo fijo detrás */}
       <div className="fixed inset-0 pointer-events-none z-0">
         <CosmicBackground sectionIndex={current} />
       </div>
 
-      {/* Contenido encima */}
       <div className="relative z-10">
+        {/* Intro */}
         <div
           ref={(el) => {
             sectionsRef.current[0] = el;
@@ -138,6 +135,7 @@ export default function Home() {
           <IntroSection />
         </div>
 
+        {/* About */}
         <div
           ref={(el) => {
             sectionsRef.current[1] = el;
@@ -147,7 +145,51 @@ export default function Home() {
           <AboutSection />
         </div>
 
-        {/* Si más secciones las pones aquí, aumenta el número de refs (simplemente añade más divs) */}
+        {/* Services */}
+        <div
+          ref={(el) => {
+            sectionsRef.current[2] = el;
+          }}
+          className="h-screen flex items-center justify-center"
+        >
+          <ServicesSection />
+        </div>
+
+        {/* Projects */}
+        <div
+          ref={(el) => {
+            sectionsRef.current[3] = el;
+          }}
+          className="min-h-screen flex items-center justify-center py-12 px-6"
+        >
+          <div className="max-w-6xl w-full">
+            <ProjectsSection />
+          </div>
+        </div>
+
+        {/* Testimonials */}
+        <div
+          ref={(el) => {
+            sectionsRef.current[4] = el;
+          }}
+          className="min-h-screen flex items-center justify-center py-12 px-6"
+        >
+          <div className="max-w-6xl w-full">
+            <TestimonialsSection />
+          </div>
+        </div>
+
+        {/* Contact / CTA */}
+        <div
+          ref={(el) => {
+            sectionsRef.current[5] = el;
+          }}
+          className="min-h-screen flex items-center justify-center py-12 px-6"
+        >
+          <div className="max-w-6xl w-full">
+            <ContactSection />
+          </div>
+        </div>
       </div>
     </main>
   );
